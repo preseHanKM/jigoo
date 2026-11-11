@@ -1,0 +1,735 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>지구 지킴이</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: one column classroom app — a thermometer-coloured header band, three tabs, each tab one focused card. */
+:root{
+  --bg:#eef4f7; --surface:#ffffff; --surface-2:#f6fafc; --ink:#13232e; --muted:#566a77; --line:#d3e0e7;
+  --cool:#1a78b8; --hot:#df4f2a; --ok:#23915a; --ok-bg:#e3f5ea; --bad:#cc3434; --bad-bg:#fbe7e7;
+  --gold:#c08a12; --focus:#f2a12a;
+  --display:"Jua","Noto Sans KR","Malgun Gothic",sans-serif;
+  --body:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1a21; --surface:#16242d; --surface-2:#1b2c37; --ink:#e6eff4; --muted:#9db0bc; --line:#2a3d49;
+  --cool:#5db3ec; --hot:#ff7a52; --ok:#5fd394; --ok-bg:#16362a; --bad:#ff7b7b; --bad-bg:#3a1d1f;
+  --gold:#f0c24b; --focus:#f2a12a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1a21; --surface:#16242d; --surface-2:#1b2c37; --ink:#e6eff4; --muted:#9db0bc; --line:#2a3d49;
+  --cool:#5db3ec; --hot:#ff7a52; --ok:#5fd394; --ok-bg:#16362a; --bad:#ff7b7b; --bad-bg:#3a1d1f;
+  --gold:#f0c24b; --focus:#f2a12a; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;line-height:1.25}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+header{display:flex;flex-direction:column;gap:6px}
+.thermo{height:8px;border-radius:99px;background:linear-gradient(90deg,var(--cool),#7fc5a0 35%,#f0b43a 65%,var(--hot))}
+header h1{font-size:clamp(28px,6vw,40px)}
+header p{margin:0;color:var(--muted)}
+
+nav{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:5px;flex-wrap:wrap}
+nav button{flex:1 1 100px;border:0;background:transparent;border-radius:10px;padding:10px 8px;cursor:pointer;font-family:var(--display);font-size:18px;color:var(--muted)}
+nav button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.muted{color:var(--muted)}
+.btn{border:0;border-radius:12px;padding:12px 18px;cursor:pointer;font-family:var(--display);font-size:18px;background:var(--ink);color:var(--bg)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.hot{background:var(--hot);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* ---------- 온도 필터 ---------- */
+.scene{position:relative;width:100%;max-width:100%;aspect-ratio:16/10;border-radius:14px;overflow:hidden;transition:background 1s;user-select:none;container-type:inline-size}
+.scene .sea{position:absolute;left:0;bottom:0;width:55%;height:45%;transition:background 1s}
+.scene .land{position:absolute;right:0;bottom:0;width:49%;height:52%;border-top-left-radius:30% 30%;transition:background 1s}
+.scene .ice{position:absolute;left:3%;top:52%;width:25%;height:6%;background:#f4fbff;border-radius:40% 40% 10% 10%;transition:all 1.2s}
+.scene .ice2{left:35%;top:54%;width:16%;height:5%}
+.sp.art{font-size:0;line-height:0}
+.sp.art svg{width:100%;height:auto;display:block;overflow:visible}
+.sp.fruit{font-size:max(10px,2.4cqw)}
+.flap{transform-origin:40px 26px;animation:flap .5s ease-in-out infinite alternate}
+@keyframes flap{from{transform:scaleY(1)}to{transform:scaleY(.35)}}
+.sp.flying{animation:cross var(--dur) linear var(--delay) infinite,bobfly var(--bob) ease-in-out infinite}
+.sp.flying .flap{animation-duration:var(--flap)}
+.sp.flying.to-left svg{transform:scaleX(-1)}
+@keyframes cross{from{left:var(--from)}to{left:var(--to)}}
+@keyframes bobfly{0%,100%{margin-top:0}50%{margin-top:-2%}}
+.scene .soil{position:absolute;right:0;bottom:0;width:49%;height:9%;background:linear-gradient(180deg,#7a5536,#5a3b24);border-top:2px dashed rgba(0,0,0,.18)}
+@media (prefers-reduced-motion:reduce){.flap,.sp.flying{animation:none}.sp.flying{left:50%}}
+.scene .sun{position:absolute;right:6%;top:6%;width:13%;aspect-ratio:1;border-radius:50%;transition:all 1s}
+.sp{position:absolute;transform:translate(-50%,-50%);font-size:max(13px,3.5cqw);line-height:1;transition:opacity 1s,transform 1s,filter 1s}
+.sp.big{font-size:max(17px,4.6cqw)}
+.sp.gone{opacity:0;transform:translate(-50%,-10%) scale(.4);filter:grayscale(1)}
+.sp.trash{animation:bob 3.2s ease-in-out infinite}
+.sp.trash.hidden{opacity:0}
+.scene.final .sp.trash{filter:drop-shadow(0 0 5px #fff) drop-shadow(0 0 9px rgba(255,220,120,.9))}
+@keyframes bob{0%,100%{margin-top:0}50%{margin-top:-6px}}
+@media (prefers-reduced-motion:reduce){.sp.trash{animation:none}.scene *{transition:none!important}}
+.badge-temp{position:absolute;left:3%;top:5%;background:rgba(0,0,0,.55);color:#fff;font-family:var(--display);font-size:max(18px,4.2cqw);padding:.15em .55em;border-radius:12px;font-variant-numeric:tabular-nums}
+.stack{display:flex;flex-direction:column;gap:14px}
+.stack .field{flex:none}
+.qmain,.qside{display:flex;flex-direction:column;gap:14px;min-width:0}
+nav .fs{flex:0 0 auto;padding:10px 14px}
+
+.slider{display:flex;flex-direction:column;gap:6px}
+.slider input{width:100%;accent-color:var(--hot);height:28px}
+.ticks{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ticks button{border:0;background:none;cursor:pointer;color:inherit;padding:2px}
+.stage h2{font-size:24px}
+.stage p{margin:6px 0 0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{font-size:14px;border-radius:99px;padding:3px 10px;background:var(--surface-2);border:1px solid var(--line)}
+.chip.lost{color:var(--bad);border-color:currentColor;background:transparent}
+.chip.trash{color:var(--gold);border-color:currentColor;background:transparent}
+.final-note{border-radius:14px;padding:16px;background:var(--surface-2);border:1px dashed var(--gold)}
+.final-note h3{font-size:22px;color:var(--gold)}
+.final-note p{margin:6px 0 0}
+
+/* ---------- 퀴즈 ---------- */
+.field{display:flex;flex-direction:column;gap:4px;flex:1 1 160px;min-width:0}
+.field label{font-size:14px;color:var(--muted)}
+.field input{border:1.5px solid var(--line);background:var(--surface-2);border-radius:10px;padding:10px 12px;width:100%}
+.progress{height:10px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
+.progress span{display:block;height:100%;background:linear-gradient(90deg,var(--cool),var(--hot));transition:width .4s}
+.qhead{display:flex;justify-content:space-between;gap:10px;font-size:15px;color:var(--muted);font-variant-numeric:tabular-nums}
+.qhead .clock{font-family:var(--display);font-size:20px;color:var(--ink)}
+.qitem{font-size:64px;line-height:1;text-align:center}
+.qtext{font-family:var(--display);font-size:24px;text-align:center;text-wrap:balance}
+.ox{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.oxbtn{border:3px solid var(--line);background:var(--surface-2);border-radius:18px;padding:10px;cursor:pointer;font-family:var(--display);font-size:clamp(56px,14vw,88px);line-height:1.1}
+.oxbtn.o{color:var(--cool)}
+.oxbtn.x{color:var(--bad)}
+.oxbtn:hover:not(:disabled){border-color:currentColor}
+.oxbtn.right{border-color:var(--ok);background:var(--ok-bg)}
+.oxbtn.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.oxbtn:disabled{cursor:default}
+.oxbtn:disabled:not(.right):not(.wrong){opacity:.4}
+.explain{border-radius:12px;padding:12px 14px;background:var(--surface-2);border-left:5px solid var(--ok)}
+.explain.bad{border-left-color:var(--bad)}
+.explain b{font-family:var(--display);font-weight:400;font-size:18px}
+.score-big{font-family:var(--display);font-size:64px;line-height:1;text-align:center;font-variant-numeric:tabular-nums}
+.score-big small{font-size:22px;color:var(--muted)}
+.result-msg{text-align:center;font-family:var(--display);font-size:22px}
+.breakdown{text-align:center;color:var(--muted);margin:0}
+.newbest{color:var(--hot)}
+.note{font-size:14px;color:var(--muted);text-align:center;margin:0}
+.note.warn{color:var(--bad)}
+.rules{margin:0;padding-left:20px;color:var(--muted);font-size:15px}
+.keyhint{font-size:13px;color:var(--muted);text-align:center;margin:0}
+
+/* ---------- 랭킹 ---------- */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:13px;color:var(--muted);font-weight:500}
+td.num,th.num{text-align:right}
+tr.me td{background:var(--surface-2);font-weight:700}
+.medal{font-family:var(--display);font-size:20px}
+.rank-1{color:var(--gold)}
+.empty{text-align:center;padding:30px 10px;color:var(--muted)}
+
+/* ---------- 가로 화면 (16:9 TV·프로젝터·노트북): 스크롤 없이 한 화면에 ---------- */
+@media (min-width:900px) and (min-aspect-ratio:4/3) and (min-height:500px){
+  html,body{height:100%}
+  body{overflow:hidden;padding-block:14px}
+  .wrap{max-width:1600px;height:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr);gap:12px 24px}
+  header{grid-column:1;gap:4px}
+  header h1{font-size:clamp(26px,3.6vh,36px)}
+  header p{font-size:15px}
+  .thermo{height:6px}
+  nav{grid-column:2;align-self:end;flex-wrap:nowrap}
+  nav button{flex:0 0 auto;padding:10px 20px}
+  .wrap>section{grid-column:1 / -1;min-height:0}
+
+  /* 온도 필터: 왼쪽 그림, 오른쪽 설명 */
+  #view-filter{display:grid;grid-template-columns:minmax(0,1fr) clamp(300px,30%,440px);grid-template-rows:minmax(0,1fr) auto auto;
+    grid-template-areas:"scene stage" "scene slider" "scene btns";gap:14px 22px}
+  .scene-box{grid-area:scene;container-type:size;min-height:0;display:flex;align-items:center;justify-content:center}
+  .scene-box .scene{width:min(100cqw,160cqh)}
+  #view-filter .stage{grid-area:stage;overflow:auto;min-height:0;padding-right:4px}
+  #view-filter .slider{grid-area:slider}
+  #view-filter>.row{grid-area:btns}
+  #view-filter>.row .btn{flex:1}
+
+  /* 퀴즈: 왼쪽 문제, 오른쪽 O/X */
+  #view-quiz{overflow:auto}
+  #quizStart,#quizEnd{width:100%;max-width:760px;margin:auto}
+  #quizPlay{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px 32px;align-items:center;height:100%}
+  .qitem{font-size:clamp(64px,12vh,120px)}
+  .qtext{font-size:clamp(24px,3.8vh,38px)}
+  .oxbtn{font-size:clamp(64px,13vh,130px)}
+
+  /* 랭킹: 표만 안에서 스크롤 */
+  .tbl-wrap{flex:1;min-height:0;overflow:auto}
+  th{position:sticky;top:0;background:var(--surface);z-index:1}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="thermo" aria-hidden="true"></div>
+    <h1>지구 지킴이</h1>
+    <p>지구의 온도를 올려 보고, OX 퀴즈를 누가 가장 빨리 정확하게 푸는지 겨뤄 보세요.</p>
+  </header>
+
+  <nav role="tablist" aria-label="메뉴">
+    <button role="tab" id="tab-filter" aria-selected="true" data-view="filter">🌡️ 온도 필터</button>
+    <button role="tab" id="tab-quiz" aria-selected="false" data-view="quiz">⭕ OX 퀴즈</button>
+    <button role="tab" id="tab-rank" aria-selected="false" data-view="rank">🏆 랭킹</button>
+    <button class="fs" id="fsBtn" aria-label="전체 화면" title="전체 화면" hidden>⛶</button>
+  </nav>
+
+  <!-- 온도 필터 -->
+  <section class="card" id="view-filter">
+    <div class="scene-box">
+    <div class="scene" id="scene" role="img" aria-label="지구 온도에 따라 생물이 사라지고 쓰레기가 쌓이는 바다와 숲의 그림">
+      <div class="sun" id="sun"></div>
+      <div class="sea" id="sea"></div>
+      <div class="land" id="land"></div>
+      <div class="soil" aria-hidden="true"></div>
+      <div class="ice" id="ice"></div>
+      <div class="ice ice2" id="ice2"></div>
+      <div class="badge-temp" id="badgeTemp">+1.2°C</div>
+    </div>
+    </div>
+
+    <div class="slider">
+      <label for="temp" class="muted">슬라이더를 오른쪽으로 밀어 지구의 온도를 올려 보세요</label>
+      <input type="range" id="temp" min="0" max="5" step="1" value="0">
+      <div class="ticks" id="ticks"></div>
+    </div>
+
+    <div class="stage" id="stage" aria-live="polite"></div>
+    <div class="row">
+      <button class="btn ghost" id="prevStage">◀ 내리기</button>
+      <button class="btn hot" id="nextStage">온도 올리기 ▶</button>
+    </div>
+  </section>
+
+  <!-- 퀴즈 -->
+  <section class="card" id="view-quiz" hidden>
+    <div id="quizStart" class="stack">
+      <h2 style="font-size:26px">분리배출 · 기후 OX 퀴즈</h2>
+      <ul class="rules">
+        <li>한 번 도전에 10문제가 나와요. 맞으면 ⭕, 틀리면 ❌를 누르세요.</li>
+        <li>랭킹은 <b>정답을 많이 맞힌 순서</b>로 정해요. 정답 수가 같으면 <b>더 빨리 푼 친구</b>가 앞에 와요.</li>
+        <li>몇 번이든 다시 도전할 수 있고, 랭킹에는 <b>가장 좋은 기록</b>이 올라가요.</li>
+      </ul>
+      <div class="field">
+        <label for="nick">이름 또는 별명</label>
+        <input id="nick" maxlength="10" placeholder="예: 김OO" autocomplete="off">
+      </div>
+      <p class="note" id="startNote">다음에도 똑같은 이름을 적어야 내 기록이 이어져요. 이름이 같은 친구가 있다면 별명을 써 주세요.</p>
+      <button class="btn hot" id="startBtn">도전 시작!</button>
+    </div>
+
+    <div id="quizPlay" class="stack" hidden>
+      <div class="qmain">
+        <div class="qhead"><span id="qCount">1 / 10</span><span>⏱ <span class="clock" id="qClock">0.0초</span></span></div>
+        <div class="progress"><span id="qBar" style="width:0%"></span></div>
+        <div class="qitem" id="qItem" aria-hidden="true"></div>
+        <div class="qtext" id="qText"></div>
+      </div>
+      <div class="qside">
+        <div class="ox">
+          <button class="oxbtn o" id="btnO" aria-label="O, 맞다">O</button>
+          <button class="oxbtn x" id="btnX" aria-label="X, 틀리다">X</button>
+        </div>
+        <p class="keyhint">키보드: O 키 또는 ← / X 키 또는 →, 다음 문제는 Enter</p>
+        <div id="qExplain" hidden></div>
+        <button class="btn" id="nextQ" hidden>다음 문제 ▶</button>
+      </div>
+    </div>
+
+    <div id="quizEnd" class="stack" hidden>
+      <div class="score-big"><span id="endCorrect">0</span><small> / 10 정답</small></div>
+      <div class="result-msg" id="endMsg"></div>
+      <p class="breakdown" id="endBreak"></p>
+      <p class="note" id="saveNote"></p>
+      <div class="row" style="justify-content:center">
+        <button class="btn hot" id="retryBtn">다시 도전하기</button>
+        <button class="btn ghost" id="toRankBtn">랭킹 보기</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 랭킹 -->
+  <section class="card" id="view-rank" hidden>
+    <h2 style="font-size:26px">우리들의 랭킹</h2>
+    <p class="muted" style="margin:0">정답을 많이 맞힌 순서로, 정답 수가 같으면 문제를 더 빨리 푼 순서로 순위를 정해요. 학생마다 가장 좋은 기록만 표시돼요.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>순위</th><th>이름</th><th class="num">정답</th><th class="num">풀이 시간</th></tr></thead>
+        <tbody id="rankBody"><tr><td colspan="4" class="empty">랭킹을 불러오는 중이에요…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note" id="rankNote"></p>
+  </section>
+</div>
+
+<script>
+/* ===================== 공통 ===================== */
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+let currentView="filter";
+function show(view){
+  currentView=view;
+  ["filter","quiz","rank"].forEach(v=>{
+    $("view-"+v).hidden = v!==view;
+    $("tab-"+v).setAttribute("aria-selected", v===view ? "true":"false");
+  });
+  if(location.hash !== "#"+view) history.replaceState(null,"","#"+view);
+}
+document.querySelectorAll('nav [role="tab"]').forEach(b=>b.addEventListener("click",()=>show(b.dataset.view)));
+/* 전체 화면 (TV·프로젝터용) */
+(()=>{
+  const fb=$("fsBtn");
+  if(!document.fullscreenEnabled) return;
+  fb.hidden=false;
+  fb.addEventListener("click",()=>{
+    const p = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    if(p && p.catch) p.catch(()=>{ fb.hidden=true; });
+  });
+  document.addEventListener("fullscreenchange",()=>{ fb.setAttribute("aria-label", document.fullscreenElement?"전체 화면 끝내기":"전체 화면"); fb.title=fb.getAttribute("aria-label"); });
+})();
+window.addEventListener("hashchange",()=>{ const h=location.hash.slice(1); if(["filter","quiz","rank"].includes(h)) show(h); });
+
+/* ===================== 온도 필터 ===================== */
+const STAGES = [
+  { t:"+1.2°C", title:"지금의 지구",
+    text:"산업화 이전(약 150년 전)보다 지구는 이미 1°C 넘게 따뜻해졌어요. 폭염과 폭우가 잦아지고 있지만, 아직 바다와 숲에는 많은 생물이 함께 살고 있어요. 그런데 벌써 여기저기 사람이 버린 쓰레기가 보이네요.",
+    lost:[] },
+  { t:"+1.5°C", title:"산호초가 하얗게 변해요",
+    text:"지구가 1.5°C 따뜻해지면 바닷물이 뜨거워져 전 세계 산호초의 70~90%가 사라질 수 있어요. 산호초에 기대어 사는 물고기와 문어도 집을 잃어요.",
+    lost:["산호초 일부","열대 물고기","문어","새우"] },
+  { t:"+2°C", title:"북극의 얼음이 녹아요",
+    text:"2°C가 되면 산호초는 99% 넘게 사라질 수 있어요. 여름에 북극 바다얼음이 완전히 녹는 해도 생겨, 얼음 위에서 사냥하고 쉬는 북극곰과 물범이 살 곳을 잃어요. 뜨거워진 바다에서 바다거북도 살기 힘들어져요.",
+    lost:["남은 산호초","바다 물고기","바다거북","오징어","북극 바다얼음","북극곰","물범"] },
+  { t:"+3°C", title:"꽃과 곤충, 펭귄이 줄어요",
+    text:"꽃이 피는 시기와 꿀벌이 활동하는 시기가 어긋나고 더위와 가뭄이 심해져요. 세계 주요 농작물 100종 가운데 약 70종이 꿀벌 같은 곤충의 도움으로 열매를 맺기 때문에 숲의 열매와 과일도 줄어요. 남극의 바다얼음도 줄어 펭귄이 새끼를 키울 곳을 잃어요.",
+    lost:["꿀벌","꽃","숲의 열매","무당벌레","애벌레","개구리","해달","남극 바다얼음","펭귄"] },
+  { t:"+4°C", title:"숲이 메말라요",
+    text:"긴 가뭄과 큰 산불로 숲이 버티기 어려워져요. 숲에 기대어 사는 새, 부엉이, 다람쥐, 여우, 나비도 갈 곳이 없어져요.",
+    lost:["숲","숲의 새들","하늘의 새","부엉이","다람쥐","여우","고슴도치","도마뱀","나비","오리"] },
+  { t:"+5°C", title:"그리고 끝까지 남은 것",
+    text:"많은 생물이 살기 어려운 뜨거운 지구가 되었어요. 그런데 이상하죠? 생물은 모두 사라졌는데, 우리가 버린 쓰레기는 그대로 남아 있어요.",
+    lost:["사슴","토끼","달팽이","개미","생쥐","두더지","돌고래","고래","상어","바닷가재","게","갈매기"] }
+];
+/* 장면 속 생물: x,y는 % 위치, g는 사라지는 단계, svg는 직접 그린 그림(w는 너비 %) */
+const SPRITES = [
+  // 바다
+  {e:"🪸",x:8,y:92,g:1},{e:"🪸",x:22,y:94,g:1},{e:"🪸",x:38,y:92,g:2},
+  {e:"🐠",x:14,y:76,g:1},{e:"🐙",x:27,y:86,g:1},{e:"🦐",x:35,y:88,g:1},
+  {e:"🐟",x:33,y:72,g:2},{e:"🐡",x:46,y:84,g:2},{e:"🐢",x:22,y:68,g:2},{e:"🦑",x:42,y:74,g:2},
+  {e:"🦦",x:31,y:60,g:3},{e:"🦆",x:52,y:59,g:4},
+  {e:"🐋",x:8,y:73,g:5,big:1},{e:"🐬",x:48,y:65,g:5},{e:"🦈",x:18,y:84,g:5},{e:"🦞",x:29,y:96,g:5},{e:"🦀",x:50,y:95,g:5},
+  // 북극 얼음
+  {svg:"bear",x:14,y:46,w:7.5,g:2},{e:"🦭",x:23,y:50,g:2},
+  // 남극 얼음
+  {svg:"penguin",x:39,y:50.5,w:3.4,g:3},{svg:"penguin",x:43.5,y:50,w:3.8,g:3},{svg:"penguin",x:47.5,y:51,w:2.6,g:3},
+  // 하늘을 나는 새
+  /* fly: dir 1 = 오른쪽으로, -1 = 왼쪽으로 / dur = 화면을 가로지르는 시간(초) / flap = 날갯짓 속도(초) */
+  {svg:"birdRed",x:0,y:17,w:7,g:4,fly:{dir:1,dur:21,delay:-6,flap:.42}},
+  {svg:"birdBlue",x:0,y:25,w:5.5,g:4,fly:{dir:-1,dur:14,delay:-3,flap:.28}},
+  {svg:"birdYellow",x:0,y:9,w:4.5,g:4,fly:{dir:1,dur:31,delay:-19,flap:.55}},
+  {svg:"gull",x:0,y:21,w:6.5,g:5,fly:{dir:-1,dur:26,delay:-14,flap:.75}},
+  {svg:"birdBlue",x:0,y:13,w:4,g:4,fly:{dir:1,dur:17,delay:-11,flap:.32}},
+  {e:"🦋",x:63,y:46,g:4},
+  // 들판
+  {e:"🌼",x:58,y:88,g:3},{e:"🌷",x:66,y:90,g:3},{e:"🌻",x:63,y:79,g:3},
+  {e:"🐝",x:57,y:71,g:3},{e:"🐝",x:68,y:69,g:3},{e:"🐞",x:64,y:87,g:3},{e:"🐛",x:55,y:95,g:3},
+  {svg:"frog",x:56,y:81,w:4,g:3},
+  {e:"🦎",x:71,y:90,g:4},{e:"🦔",x:80,y:93,g:4},
+  {e:"🦌",x:67,y:80,g:5,big:1},{e:"🐌",x:61,y:90,g:5},{e:"🐁",x:76,y:89,g:5},{e:"🐜",x:86,y:96,g:5},{e:"🐇",x:88,y:89,g:5},
+  // 땅속
+  {svg:"mole",x:72,y:96,w:6.5,g:5},
+  // 가장자리 숲: 뒤 나무, 앞 큰 나무
+  {svg:"tree",x:98,y:48,w:22,g:4},
+  {svg:"tree",x:85,y:57,w:28,g:4},
+  // 숲의 열매
+  {e:"🍎",x:76,y:45,g:3,fruit:1},{e:"🍊",x:82,y:36,g:3,fruit:1},{e:"🍎",x:90,y:40,g:3,fruit:1},
+  {e:"🍒",x:94,y:51,g:3,fruit:1},{e:"🍎",x:85,y:52,g:3,fruit:1},{e:"🍊",x:97,y:34,g:3,fruit:1},{e:"🍎",x:79,y:55,g:3,fruit:1},
+  // 나무 위의 새들과 동물
+  {svg:"owl",x:78.5,y:64.6,w:4.4,g:4},
+  {svg:"sitBlue",x:80,y:29.5,w:3.2,g:4},{svg:"sitYellow",x:94,y:27,w:3,g:4},
+  {e:"🐿️",x:90,y:76,g:4},
+  {svg:"fox",x:94,y:86,w:4.6,g:4}
+];
+/* 날아가는 새 그림 (날개 색, 몸 색, 배 색, 부리 색) */
+const flyBird=(wing,body,belly,beak)=>`<svg viewBox="0 0 80 50" aria-hidden="true">
+    <path class="flap" d="M40 25 Q28 -2 6 4 Q22 12 30 27 Z" fill="${wing}"/>
+    <path d="M26 28 L6 20 L9 36 Z" fill="${wing}"/>
+    <ellipse cx="40" cy="29" rx="17" ry="9" fill="${body}"/>
+    <ellipse cx="42" cy="32" rx="10" ry="5" fill="${belly}"/>
+    <circle cx="57" cy="23" r="8.5" fill="${body}"/>
+    <path d="M64 21 L74 24 L64 27 Z" fill="${beak}"/>
+    <circle cx="59" cy="21" r="1.9" fill="#1d2a33"/>
+    <path class="flap" d="M44 26 Q46 4 30 0 Q38 14 36 28 Z" fill="${wing}" opacity=".85"/>
+  </svg>`;
+const sitBird=(body,dark,belly,beak)=>`<svg viewBox="0 0 40 32" aria-hidden="true">
+    <path d="M6 18 L0 12 L2 22 Z" fill="${dark}"/>
+    <ellipse cx="17" cy="19" rx="12" ry="9" fill="${body}"/>
+    <ellipse cx="19" cy="22" rx="7" ry="5" fill="${belly}"/>
+    <circle cx="28" cy="12" r="6.5" fill="${body}"/>
+    <path d="M33.5 11 L40 13 L33.5 15 Z" fill="${beak}"/>
+    <circle cx="30" cy="10.5" r="1.4" fill="#1d2a33"/>
+    <path d="M15 27 v4 M20 27 v4" stroke="#6b4a2b" stroke-width="1.6" stroke-linecap="round"/>
+  </svg>`;
+/* 직접 그린 그림 */
+const SVGS = {
+  bear:`<svg viewBox="0 0 90 100" aria-hidden="true">
+    <g stroke="#22426b" stroke-width="2.2" stroke-linejoin="round" fill="#f7f4ea">
+      <ellipse cx="19" cy="89" rx="12.5" ry="7.5"/><ellipse cx="71" cy="89" rx="12.5" ry="7.5"/>
+      <path d="M45 40 C21 40 11 62 13 80 C15 93 75 93 77 80 C79 62 69 40 45 40 Z"/>
+    </g>
+    <ellipse cx="45" cy="76" rx="20" ry="13" fill="#e6eef5"/>
+    <ellipse cx="17" cy="90" rx="5" ry="3.4" fill="#cfe0ef"/><ellipse cx="73" cy="90" rx="5" ry="3.4" fill="#cfe0ef"/>
+    <g stroke="#22426b" stroke-width="2.2" stroke-linejoin="round" fill="#f7f4ea">
+      <rect x="27" y="75" width="13.5" height="21" rx="6.75"/><rect x="49.5" y="75" width="13.5" height="21" rx="6.75"/>
+      <circle cx="23" cy="13" r="8.5"/><circle cx="67" cy="13" r="8.5"/>
+      <ellipse cx="45" cy="31" rx="25" ry="21.5"/>
+    </g>
+    <circle cx="23.5" cy="13.5" r="4.6" fill="#bcd6ee"/><circle cx="66.5" cy="13.5" r="4.6" fill="#bcd6ee"/>
+    <path d="M30.75 95 v-4 M33.75 95.5 v-4.5 M36.75 95 v-4 M53.25 95 v-4 M56.25 95.5 v-4.5 M59.25 95 v-4" stroke="#22426b" stroke-width="1.3" stroke-linecap="round"/>
+    <path d="M20 58 l-3 5 M23 55 l-2 6 M70 58 l3 5 M67 55 l2 6" stroke="#9fb4c9" stroke-width="1.3" stroke-linecap="round"/>
+    <ellipse cx="45" cy="40" rx="12" ry="9" fill="#dbe6ef"/>
+    <path d="M39 35 Q45 32 51 35 Q49.5 41.5 45 42.5 Q40.5 41.5 39 35 Z" fill="#1d2a3a"/>
+    <path d="M45 42.5 v2 M40 45 q5 5 10 0" fill="none" stroke="#1d2a3a" stroke-width="1.6" stroke-linecap="round"/>
+    <ellipse cx="35.5" cy="27" rx="2.8" ry="3.4" fill="#1d2a3a"/><ellipse cx="54.5" cy="27" rx="2.8" ry="3.4" fill="#1d2a3a"/>
+    <circle cx="36.5" cy="25.8" r="1" fill="#fff"/><circle cx="55.5" cy="25.8" r="1" fill="#fff"/>
+    <path d="M31.5 20.5 q3 -2 6 0 M52.5 20.5 q3 -2 6 0" fill="none" stroke="#22426b" stroke-width="1.3" stroke-linecap="round"/>
+  </svg>`,
+  mole:`<svg viewBox="0 0 90 40" aria-hidden="true">
+    <ellipse cx="45" cy="22" rx="44" ry="15" fill="#3e2a1a"/>
+    <path d="M2 22 Q-8 30 -20 26" stroke="#3e2a1a" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <path d="M20 23 q-6 1 -9 -2" stroke="#3b3a40" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="42" cy="24" rx="22" ry="12" fill="#45444c"/>
+    <ellipse cx="38" cy="20" rx="12" ry="5" fill="#5a5962" opacity=".7"/>
+    <ellipse cx="66" cy="22" rx="8" ry="5" fill="#f2a3b3"/>
+    <circle cx="73.5" cy="21" r="2.4" fill="#e07a92"/>
+    <circle cx="57" cy="19" r="1.3" fill="#111"/>
+    <ellipse cx="55" cy="32" rx="7" ry="4" fill="#f2a3b3"/><ellipse cx="32" cy="33" rx="6" ry="3.5" fill="#f2a3b3"/>
+    <path d="M59 34 l3 2 M57 35 l2 3 M54 35.5 l1 3" stroke="#d98297" stroke-width="1.1" stroke-linecap="round"/>
+    <circle cx="80" cy="30" r="1.5" fill="#6b4a2f"/><circle cx="84" cy="25" r="1" fill="#6b4a2f"/><circle cx="12" cy="31" r="1.3" fill="#6b4a2f"/>
+  </svg>`,
+  penguin:`<svg viewBox="0 0 60 82" aria-hidden="true">
+    <ellipse cx="22" cy="78" rx="8" ry="3.5" fill="#f39a1e"/><ellipse cx="38" cy="78" rx="8" ry="3.5" fill="#f39a1e"/>
+    <ellipse cx="9" cy="46" rx="5" ry="15" fill="#22303a" transform="rotate(18 9 46)"/>
+    <ellipse cx="51" cy="46" rx="5" ry="15" fill="#22303a" transform="rotate(-18 51 46)"/>
+    <ellipse cx="30" cy="45" rx="21" ry="32" fill="#22303a"/>
+    <ellipse cx="30" cy="52" rx="14" ry="23" fill="#fbfdff"/>
+    <ellipse cx="30" cy="27" rx="12" ry="9" fill="#fbfdff"/>
+    <circle cx="25" cy="25" r="2.6" fill="#1d2a33"/><circle cx="35" cy="25" r="2.6" fill="#1d2a33"/>
+    <circle cx="25.8" cy="24.2" r=".8" fill="#fff"/><circle cx="35.8" cy="24.2" r=".8" fill="#fff"/>
+    <path d="M26 30 L34 30 L30 35 Z" fill="#f39a1e"/>
+    <circle cx="21" cy="31" r="2.4" fill="#ffc4cf" opacity=".8"/><circle cx="39" cy="31" r="2.4" fill="#ffc4cf" opacity=".8"/>
+  </svg>`,
+  fox:`<svg viewBox="0 0 70 90" aria-hidden="true">
+    <path d="M48 82 Q74 74 66 46 Q60 66 44 72 Z" fill="#e8772e"/>
+    <path d="M66 46 Q70 56 66 62 Q62 54 64 48 Z" fill="#fff7ee"/>
+    <ellipse cx="35" cy="64" rx="18" ry="22" fill="#e8772e"/>
+    <ellipse cx="35" cy="67" rx="10" ry="16" fill="#fff7ee"/>
+    <ellipse cx="27" cy="86" rx="6.5" ry="4" fill="#3a2a22"/><ellipse cx="43" cy="86" rx="6.5" ry="4" fill="#3a2a22"/>
+    <path d="M13 4 L22 27 L31 20 Z" fill="#e8772e"/><path d="M57 4 L48 27 L39 20 Z" fill="#e8772e"/>
+    <path d="M16 10 L22 23 L27 19 Z" fill="#3a2a22"/><path d="M54 10 L48 23 L43 19 Z" fill="#3a2a22"/>
+    <ellipse cx="35" cy="31" rx="20" ry="16" fill="#e8772e"/>
+    <path d="M15 31 Q35 56 55 31 Q47 43 35 45 Q23 43 15 31 Z" fill="#fff7ee"/>
+    <circle cx="27.5" cy="28" r="2.5" fill="#1d2a33"/><circle cx="42.5" cy="28" r="2.5" fill="#1d2a33"/>
+    <circle cx="28.3" cy="27.2" r=".8" fill="#fff"/><circle cx="43.3" cy="27.2" r=".8" fill="#fff"/>
+    <circle cx="35" cy="40" r="2.7" fill="#1d2a33"/>
+  </svg>`,
+  frog:`<svg viewBox="0 0 70 58" aria-hidden="true">
+    <ellipse cx="11" cy="47" rx="12" ry="7" fill="#3f9a3a"/><ellipse cx="59" cy="47" rx="12" ry="7" fill="#3f9a3a"/>
+    <ellipse cx="35" cy="39" rx="22" ry="16" fill="#5cb85a"/>
+    <ellipse cx="35" cy="29" rx="23" ry="12" fill="#5cb85a"/>
+    <circle cx="22" cy="16" r="9" fill="#5cb85a"/><circle cx="48" cy="16" r="9" fill="#5cb85a"/>
+    <circle cx="22" cy="15" r="6" fill="#fff"/><circle cx="48" cy="15" r="6" fill="#fff"/>
+    <circle cx="22.5" cy="15.5" r="3.2" fill="#1d2a33"/><circle cx="47.5" cy="15.5" r="3.2" fill="#1d2a33"/>
+    <ellipse cx="35" cy="44" rx="13" ry="9" fill="#d7f0c4"/>
+    <path d="M24 30 q11 8 22 0" fill="none" stroke="#2c6b29" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="19" cy="30" r="3" fill="#ffb3c1" opacity=".7"/><circle cx="51" cy="30" r="3" fill="#ffb3c1" opacity=".7"/>
+    <ellipse cx="25" cy="54" rx="7" ry="3.2" fill="#3f9a3a"/><ellipse cx="45" cy="54" rx="7" ry="3.2" fill="#3f9a3a"/>
+  </svg>`,
+  owl:`<svg viewBox="0 0 50 64" aria-hidden="true">
+    <path d="M10 10 L14 2 L19 9 Z M40 10 L36 2 L31 9 Z" fill="#7a5530"/>
+    <ellipse cx="25" cy="35" rx="18" ry="23" fill="#8b6239"/>
+    <ellipse cx="25" cy="42" rx="11" ry="14" fill="#e8c999"/>
+    <circle cx="17" cy="22" r="8" fill="#fff4dc"/><circle cx="33" cy="22" r="8" fill="#fff4dc"/>
+    <circle cx="17" cy="22" r="4" fill="#1d2a33"/><circle cx="33" cy="22" r="4" fill="#1d2a33"/>
+    <circle cx="18.2" cy="20.8" r="1.2" fill="#fff"/><circle cx="34.2" cy="20.8" r="1.2" fill="#fff"/>
+    <path d="M22 28 L28 28 L25 33 Z" fill="#f0a020"/>
+    <path d="M17 64 v-6 M20 64 v-6 M30 64 v-6 M33 64 v-6" stroke="#f0a020" stroke-width="2.4" stroke-linecap="round"/>
+  </svg>`,
+  tree:`<svg viewBox="0 0 100 130" aria-hidden="true">
+    <path d="M44 130 L46 80 Q40 72 32 67 L35 63 Q43 68 48 73 L49 58 L54 58 L55 75 Q62 67 70 64 L72 68 Q62 73 57 82 L58 130 Z" fill="#7a5230"/>
+    <path d="M47 92 Q32 88 12 90 L12 94.5 Q32 93.5 47 98 Z" fill="#7a5230"/>
+    <circle cx="50" cy="36" r="31" fill="#3f8f3a"/>
+    <circle cx="24" cy="47" r="20" fill="#3f8f3a"/><circle cx="76" cy="47" r="20" fill="#3f8f3a"/>
+    <circle cx="36" cy="22" r="18" fill="#4ea446"/><circle cx="64" cy="22" r="18" fill="#4ea446"/>
+    <circle cx="50" cy="50" r="21" fill="#4ea446"/>
+    <circle cx="28" cy="36" r="12" fill="#5dbb52"/><circle cx="68" cy="34" r="13" fill="#5dbb52"/><circle cx="50" cy="13" r="12" fill="#5dbb52"/>
+    <circle cx="44" cy="38" r="7" fill="#6cc85f" opacity=".8"/>
+  </svg>`,
+  birdRed: flyBird("#b8282a","#e0403a","#ff9b86","#f5a623"),
+  birdBlue: flyBird("#2a6fb3","#3a95dd","#dff1ff","#f5a623"),
+  birdYellow: flyBird("#d9a30f","#f2c21b","#fff6cf","#e2731c"),
+  gull: flyBird("#8a99a6","#fbfdff","#ffffff","#f5c518"),
+  sitBlue: sitBird("#3a95dd","#2f7fc4","#dff1ff","#f5a623"),
+  sitYellow: sitBird("#f2c21b","#d9a30f","#fff6cf","#e2731c")
+};
+/* 사람이 버린 쓰레기: a는 나타나는 단계 (점점 쌓여요) */
+const TRASH = [
+  {e:"🧴",x:37,y:61,a:0},{e:"🥤",x:64,y:97,a:0},{e:"🛍️",x:10,y:62,a:0},
+  {e:"🥫",x:17,y:97,a:1},{e:"🚬",x:78,y:96,a:1},
+  {e:"🛍️",x:44,y:66,a:2},{e:"🧃",x:54,y:75,a:2},{e:"👟",x:40,y:85,a:2},
+  {e:"🧴",x:52,y:80,a:3},{e:"🥤",x:10,y:84,a:3},{e:"🥡",x:90,y:96,a:3},{e:"🎈",x:28,y:32,a:3},{e:"🔋",x:59,y:89,a:3},
+  {e:"🛍️",x:72,y:88,a:4},{e:"🛞",x:64,y:88,a:4},{e:"🩴",x:36,y:79,a:4},{e:"📱",x:83,y:92,a:4},{e:"🍼",x:25,y:63,a:4},
+  {e:"🥤",x:45,y:96,a:5},{e:"🧴",x:5,y:97,a:5},{e:"🛍️",x:57,y:96,a:5},{e:"🍾",x:3,y:87,a:5},{e:"🧃",x:93,y:66,a:5},
+  {e:"🪣",x:67,y:62,a:5},{e:"🧤",x:30,y:90,a:5},{e:"🪥",x:50,y:88,a:5},{e:"🎣",x:16,y:70,a:5}
+];
+const PAL = {
+  sky:["#8fd3ff","#a7d6f0","#c9d6c9","#efc58e","#f39a62","#d9583a"],
+  sky2:["#d8f1ff","#e6f1f3","#efe7cf","#fbe1b5","#fcc391","#f59060"],
+  sea:["#2384d1","#2e8ec5","#4f97a8","#6a9a98","#7a8f8b","#7d817c"],
+  land:["#6dbb5c","#78b85a","#97b55c","#b8ac63","#b99a68","#a98764"],
+  sun:["#ffd84a","#ffcf3f","#ffbe36","#ffa52e","#ff8a25","#ff5a1f"]
+};
+const scene=$("scene"), spriteEls=[], trashEls=[];
+SPRITES.forEach(s=>{
+  const d=document.createElement("div");
+  d.className="sp"+(s.big?" big":"")+(s.tree?" tree":"")+(s.fruit?" fruit":"")+(s.svg?" art":"")+(s.cls?" "+s.cls:"");
+  if(s.svg){ d.innerHTML=SVGS[s.svg]; d.style.width=s.w+"%"; } else d.textContent=s.e;
+  d.style.left=s.x+"%"; d.style.top=s.y+"%";
+  if(s.fly){
+    const f=s.fly; d.classList.add("flying"); if(f.dir<0) d.classList.add("to-left");
+    d.style.setProperty("--from", f.dir>0?"-8%":"108%");
+    d.style.setProperty("--to", f.dir>0?"108%":"-8%");
+    d.style.setProperty("--dur", f.dur+"s");
+    d.style.setProperty("--delay", f.delay+"s");
+    d.style.setProperty("--flap", f.flap+"s");
+    d.style.setProperty("--bob", (2+Math.random()*2).toFixed(1)+"s");
+  }
+  scene.appendChild(d); spriteEls.push(d);
+});
+TRASH.forEach((p,i)=>{const d=document.createElement("div");d.className="sp trash";d.textContent=p.e;d.style.left=p.x+"%";d.style.top=p.y+"%";d.style.animationDelay=(i*0.37)+"s";scene.appendChild(d);trashEls.push(d);});
+const ticks=$("ticks");
+STAGES.forEach((s,i)=>{const b=document.createElement("button");b.textContent=s.t;b.addEventListener("click",()=>setStage(i));ticks.appendChild(b);});
+
+function setStage(i){
+  i=Math.max(0,Math.min(5,i));
+  $("temp").value=i;
+  scene.style.background=`linear-gradient(180deg,${PAL.sky[i]},${PAL.sky2[i]} 60%)`;
+  $("sea").style.background=`linear-gradient(180deg,${PAL.sea[i]},color-mix(in srgb,${PAL.sea[i]} 70%,#000))`;
+  $("land").style.background=PAL.land[i];
+  const sun=$("sun"); sun.style.background=PAL.sun[i]; sun.style.boxShadow=`0 0 ${20+i*14}px ${6+i*6}px ${PAL.sun[i]}aa`; sun.style.transform=`scale(${1+i*0.12})`;
+  const ice=$("ice"); ice.style.opacity=i>=2?0:(i===1?.75:1); ice.style.transform=i>=1?`scaleX(${i>=2?.2:.7})`:"none";
+  const ice2=$("ice2"); ice2.style.opacity=i>=3?0:(i===2?.75:1); ice2.style.transform=i>=2?`scaleX(${i>=3?.2:.75})`:"none";
+  let alive=0;
+  SPRITES.forEach((s,k)=>{const g=i>=s.g; spriteEls[k].classList.toggle("gone",g); if(!g) alive++;});
+  let tc=0; TRASH.forEach((p,k)=>{const on=i>=p.a; trashEls[k].classList.toggle("hidden",!on); if(on)tc++;});
+  scene.classList.toggle("final",i===5);
+  $("badgeTemp").textContent=STAGES[i].t;
+
+  const st=STAGES[i];
+  const lostChips=st.lost.map(l=>`<span class="chip lost">사라짐 · ${l}</span>`).join("");
+  let html=`<h2>${st.t} · ${st.title}</h2><p>${st.text}</p><div class="chips">${lostChips}<span class="chip">남은 생물 ${alive}</span><span class="chip trash">쌓인 쓰레기 ${tc}개</span></div>`;
+  if(i===5){
+    html+=`<div class="final-note" style="margin-top:14px"><h3>사라지는 건 생명, 남는 건 쓰레기</h3>
+    <p>페트병 하나가 자연에서 분해되려면 약 450년이 걸려요. 비닐봉지, 일회용 컵, 담배꽁초, 고무 타이어도 아주 오랫동안 썩지 않아요. 지금 우리가 버린 쓰레기는 우리의 증손자의 증손자가 어른이 될 때까지도 남아 있을 수 있어요.</p>
+    <p><b>아직 늦지 않았어요.</b> 지구 온도 상승을 1.5°C 안에서 멈추는 것이 세계가 함께 정한 목표예요. 일회용품 줄이기, 올바른 분리배출, 걷기와 자전거 타기부터 시작해요.</p>
+    <div class="row" style="margin-top:10px"><button class="btn hot" id="goQuiz">OX 퀴즈 풀러 가기 ▶</button></div></div>`;
+  }
+  $("stage").innerHTML=html;
+  const gq=$("goQuiz"); if(gq) gq.addEventListener("click",()=>show("quiz"));
+  $("prevStage").disabled=i===0; $("nextStage").disabled=i===5;
+}
+$("temp").addEventListener("input",e=>setStage(+e.target.value));
+$("prevStage").addEventListener("click",()=>setStage(+$("temp").value-1));
+$("nextStage").addEventListener("click",()=>setStage(+$("temp").value+1));
+setStage(0);
+
+/* ===================== OX 퀴즈 ===================== */
+/* a: true = O(맞다), false = X(틀리다) */
+const Q = [
+  // 분리배출
+  {i:"🍗",q:"먹고 남은 치킨 뼈는 음식물 쓰레기로 버려요.",a:false,ex:"뼈는 딱딱해서 동물 사료나 퇴비로 쓸 수 없어요. 그래서 음식물이 아니라 일반쓰레기(종량제 봉투)로 버려요."},
+  {i:"🧅",q:"양파 껍질은 일반쓰레기(종량제 봉투)로 버려요.",a:true,ex:"양파·마늘·옥수수 껍질처럼 마르고 질긴 채소 껍질은 일반쓰레기로 버려요."},
+  {i:"🧴",q:"투명 페트병은 라벨을 떼고 찌그러뜨려서 따로 버려요.",a:true,ex:"투명 페트병은 라벨을 떼고 내용물을 비운 뒤 찌그러뜨려 따로 모아요. 옷이나 가방 같은 새 제품으로 다시 태어날 수 있어요."},
+  {i:"🥛",q:"우유팩은 신문지, 상자 같은 일반 종이와 함께 버려도 돼요.",a:false,ex:"우유팩은 안쪽이 비닐로 코팅되어 있어 일반 종이와 따로 모아요. 헹구고 펼쳐서 말린 뒤 종이팩 수거함에 넣어요."},
+  {i:"🧾",q:"영수증은 종이니까 종이류로 재활용해요.",a:false,ex:"영수증은 열을 받으면 글씨가 나타나는 특수 코팅 종이(감열지)라서 재활용이 안 돼요. 일반쓰레기로 버려요."},
+  {i:"🔋",q:"다 쓴 건전지는 일반쓰레기로 버려도 괜찮아요.",a:false,ex:"건전지에는 환경에 해로운 금속이 들어 있어요. 주민센터나 아파트의 폐건전지 수거함에 따로 모아요."},
+  {i:"🍜",q:"빨간 국물이 배어 씻어도 안 지워지는 컵라면 용기는 일반쓰레기로 버려요.",a:true,ex:"씻어도 지워지지 않을 만큼 더러워진 용기는 재활용이 어려워요. 깨끗한 스티로폼만 스티로폼으로 버려요."},
+  {i:"🥫",q:"다 마신 음료수 캔은 내용물을 비우고 캔류로 버려요.",a:true,ex:"캔은 내용물을 비우고 캔류로 버리면 다시 새 캔으로 만들 수 있어요."},
+  {i:"🥃",q:"깨진 유리컵은 유리병 수거함에 넣어요.",a:false,ex:"깨진 유리는 유리병으로 재활용되지 않고 사람이 다칠 수 있어요. 신문지로 잘 싸서 종량제 봉투에 버려요. (지역에 따라 불연성 마대에 버리기도 해요.)"},
+  {i:"📦",q:"택배 상자는 테이프와 송장을 떼고 종이류로 버려요.",a:true,ex:"비닐 테이프와 송장 스티커는 종이가 아니에요. 떼어 낸 뒤 상자를 납작하게 접어 종이류로 버려요."},
+  {i:"🪥",q:"다 쓴 칫솔은 플라스틱이니까 플라스틱류로 버려요.",a:false,ex:"칫솔은 손잡이와 칫솔모 등 여러 재료가 섞여 있어 재활용이 어려워요. 일반쓰레기로 버려요."},
+  {i:"🍕",q:"기름이 흠뻑 밴 피자 상자 바닥도 종이류로 재활용돼요.",a:false,ex:"기름이 많이 밴 종이는 재활용이 안 돼요. 깨끗한 뚜껑 부분만 종이로, 기름 밴 부분은 일반쓰레기로 버려요."},
+  // 기후·환경
+  {i:"🏭",q:"지구를 뜨겁게 만드는, 사람이 가장 많이 내뿜는 온실가스는 산소예요.",a:false,ex:"정답은 이산화탄소예요. 석탄·석유를 태울 때 나오는 이산화탄소가 지구를 담요처럼 덮어 열이 빠져나가지 못하게 해요."},
+  {i:"🌏",q:"세계 여러 나라는 파리협정에서 지구 온도 상승을 되도록 1.5°C 안으로 막자고 약속했어요.",a:true,ex:"2015년 파리협정에서 세계는 산업화 이전보다 2°C보다 훨씬 낮게, 되도록 1.5°C 안으로 막자고 약속했어요."},
+  {i:"🪸",q:"지구가 1.5°C 따뜻해지면 산호초의 70~90%가 사라질 수 있어요.",a:true,ex:"바닷물이 뜨거워지면 산호가 하얗게 변해 죽어요(백화 현상). 1.5°C면 70~90%, 2°C면 99% 넘게 사라질 수 있어요."},
+  {i:"🧴",q:"페트병은 땅에 묻으면 1년 안에 썩어 없어져요.",a:false,ex:"페트병은 약 450년이 지나야 분해된다고 해요. 그래서 한 번 쓰고 버리는 플라스틱을 줄이는 게 중요해요."},
+  {i:"🔬",q:"5mm보다 작은 플라스틱 조각을 미세플라스틱이라고 해요.",a:true,ex:"5mm보다 작은 플라스틱을 미세플라스틱이라고 해요. 물고기가 먹고, 결국 우리 식탁으로 돌아올 수 있어요."},
+  {i:"🌊",q:"바닷물이 따뜻해지면 부피가 커져서 해수면이 올라가요.",a:true,ex:"따뜻해진 바닷물은 부피가 늘어나요. 여기에 육지의 빙하가 녹은 물까지 더해져 해수면이 올라가요."},
+  {i:"🐝",q:"꿀벌이 사라져도 우리가 먹는 과일과 채소는 줄지 않아요.",a:false,ex:"사과·딸기·호박처럼 많은 과일과 채소는 꿀벌이 꽃가루를 옮겨 줘야 열매를 맺어요."},
+  {i:"🌳",q:"나무는 공기 중의 이산화탄소를 빨아들여요.",a:true,ex:"나무는 광합성을 하면서 이산화탄소를 흡수해 몸에 저장해요. 숲을 지키고 나무를 심는 것이 도움이 돼요."},
+  {i:"🚲",q:"걷기와 자전거는 자동차보다 탄소를 훨씬 적게 내보내요.",a:true,ex:"걷기와 자전거는 탄소를 거의 내보내지 않아요. 건강에도 좋아요!"},
+  {i:"🐻‍❄️",q:"북극곰은 바다얼음 위에서 사냥하기 때문에 얼음이 녹으면 위험해져요.",a:true,ex:"북극곰은 바다얼음 위에서 물범을 사냥해요. 얼음이 녹으면 먹이를 구하기 어려워져요."},
+  {i:"🐢",q:"바다거북은 바다에 떠다니는 비닐봉지를 해파리로 착각해 먹기도 해요.",a:true,ex:"물속의 비닐봉지는 해파리와 비슷하게 보여요. 이를 먹은 바다거북은 크게 다치거나 목숨을 잃을 수 있어요."},
+  {i:"🎈",q:"하늘로 날려 보낸 풍선은 하늘에서 저절로 사라져서 환경에 아무 문제가 없어요.",a:false,ex:"날아간 풍선은 결국 땅이나 바다에 떨어져 쓰레기가 돼요. 새나 바다 동물이 먹이로 착각해 삼키기도 해요."}
+];
+const ROUND=10;
+let round=[], qi=0, correct=0, elapsed=0, qStart=0, answered=true, tick=null;
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const fmt=s=>s.toFixed(1)+"초";
+const me0=store.get("earth-ox-me")||{};
+$("nick").value=me0.nick||"";
+
+$("startBtn").addEventListener("click",()=>{
+  const nick=$("nick").value.trim();
+  if(!nick){ $("startNote").textContent="이름이나 별명을 적어 주세요."; $("startNote").classList.add("warn"); $("nick").focus(); return; }
+  $("startNote").classList.remove("warn");
+  store.set("earth-ox-me",{nick});
+  startRound();
+});
+$("nick").addEventListener("keydown",e=>{ if(e.key==="Enter") $("startBtn").click(); });
+
+function startRound(){
+  round=shuffle(Q).slice(0,ROUND);
+  qi=0; correct=0; elapsed=0;
+  $("quizStart").hidden=true; $("quizEnd").hidden=true; $("quizPlay").hidden=false;
+  renderQ();
+}
+function liveTime(){ return elapsed + (answered?0:(performance.now()-qStart)/1000); }
+function renderQ(){
+  const q=round[qi]; answered=false;
+  $("qCount").textContent=`${qi+1} / ${ROUND}`;
+  $("qBar").style.width=(qi/ROUND*100)+"%";
+  $("qItem").textContent=q.i; $("qText").textContent=q.q;
+  ["btnO","btnX"].forEach(id=>{const b=$(id); b.disabled=false; b.classList.remove("right","wrong");});
+  $("qExplain").hidden=true; $("nextQ").hidden=true;
+  qStart=performance.now();
+  clearInterval(tick); tick=setInterval(()=>{$("qClock").textContent=fmt(liveTime());},100);
+}
+function answer(pick){
+  if(answered) return;
+  const q=round[qi], sec=(performance.now()-qStart)/1000;
+  answered=true; clearInterval(tick);
+  const ok=pick===q.a;
+  elapsed+=sec;
+  if(ok) correct++;
+  $("qClock").textContent=fmt(elapsed);
+  const rightBtn=q.a?$("btnO"):$("btnX"), pickedBtn=pick?$("btnO"):$("btnX");
+  $("btnO").disabled=true; $("btnX").disabled=true;
+  rightBtn.classList.add("right"); if(!ok) pickedBtn.classList.add("wrong");
+  const ex=$("qExplain"); ex.hidden=false; ex.className="explain"+(ok?"":" bad");
+  ex.innerHTML=""; const head=document.createElement("b");
+  head.textContent= ok ? `정답! (${sec.toFixed(1)}초)` : `아쉬워요. 정답은 ${q.a?"O":"X"}`;
+  const p=document.createElement("div"); p.textContent=q.ex;
+  ex.append(head,p);
+  const nb=$("nextQ"); nb.hidden=false; nb.textContent= qi===ROUND-1 ? "결과 보기 ▶" : "다음 문제 ▶"; nb.focus();
+}
+$("btnO").addEventListener("click",()=>answer(true));
+$("btnX").addEventListener("click",()=>answer(false));
+$("nextQ").addEventListener("click",()=>{ qi++; if(qi<ROUND) renderQ(); else finish(); });
+document.addEventListener("keydown",e=>{
+  if(currentView!=="quiz"||$("quizPlay").hidden) return;
+  if(e.target && e.target.tagName==="INPUT") return;
+  const k=e.key.toLowerCase();
+  if(!answered && (k==="o"||k==="arrowleft")){ e.preventDefault(); answer(true); }
+  else if(!answered && (k==="x"||k==="arrowright")){ e.preventDefault(); answer(false); }
+});
+$("retryBtn").addEventListener("click",startRound);
+$("toRankBtn").addEventListener("click",()=>show("rank"));
+
+/* ===================== 저장 & 랭킹 (공유 데이터베이스) ===================== */
+let db=null, dbReady=false, rows=[];
+const toKey=s=>Array.from(new TextEncoder().encode(s)).map(b=>b.toString(16).padStart(2,"0")).join("");
+const myKey=()=>{const m=store.get("earth-ox-me"); return m&&m.nick? toKey(m.nick):null;};
+
+/* 더 좋은 기록: 정답이 더 많거나, 정답 수가 같으면 시간이 더 짧은 것 */
+const better=(a,b)=> !b || a.correct>b.correct || (a.correct===b.correct && a.time<b.time);
+const valid=r=> r && typeof r.correct==="number" && typeof r.time==="number";
+const recText=r=>`${r.correct}개 정답 · ${fmt(r.time)}`;
+
+async function finish(){
+  $("quizPlay").hidden=true; $("quizEnd").hidden=false;
+  const cur={correct, time:Math.round(elapsed*10)/10};
+  $("endCorrect").textContent=correct;
+  $("endBreak").textContent=`풀이 시간 ${fmt(cur.time)}`;
+  const nick=(store.get("earth-ox-me")||{}).nick||$("nick").value.trim();
+  const bests=store.get("earth-ox-best2")||{};
+  const msg=$("endMsg"), note=$("saveNote");
+  msg.textContent=""; note.className="note"; note.textContent="기록을 저장하는 중이에요…";
+  let prevBest=valid(bests[nick])?bests[nick]:null, saved=false;
+  if(db){
+    try{
+      const ref=db.collection("records").doc(toKey(nick));
+      const snap=await ref.get();
+      const prev=snap.exists?snap.data():null;
+      const dbPrev=valid(prev)?{correct:prev.correct,time:prev.time}:null;
+      if(dbPrev && better(dbPrev,prevBest)) prevBest=dbPrev;
+      await ref.set(better(cur,dbPrev)
+        ? {name:nick,correct:cur.correct,time:cur.time,bestAt:Date.now(),updatedAt:Date.now()}
+        : {name:nick,correct:dbPrev.correct,time:dbPrev.time,bestAt:prev.bestAt||Date.now(),updatedAt:Date.now()});
+      saved=true;
+    }catch(e){ saved=false; }
+  }
+  bests[nick]= better(cur,prevBest) ? cur : prevBest; store.set("earth-ox-best2",bests);
+  if(!prevBest){ const s=document.createElement("span"); s.className="newbest"; s.textContent="첫 기록이 생겼어요! 🎉"; msg.append(s); }
+  else if(better(cur,prevBest)){ const s=document.createElement("span"); s.className="newbest"; s.textContent=`최고 기록 갱신! 🎉 (이전: ${recText(prevBest)})`; msg.append(s); }
+  else { msg.textContent=`내 최고 기록은 ${recText(prevBest)}이에요. 다시 도전해 볼까요?`; }
+  if(saved){ note.textContent="랭킹에 저장했어요."; }
+  else { note.classList.add("warn"); note.textContent="랭킹에 저장하지 못했어요. claude.ai에 로그인했는지, 선생님이 이 페이지의 참여 권한을 주셨는지 확인해 주세요. 기록은 이 기기에만 남아요."; }
+}
+
+function renderRank(){
+  const mk=myKey(), body=$("rankBody");
+  const list=rows.slice().sort((a,b)=>b.correct-a.correct||a.time-b.time||a.bestAt-b.bestAt);
+  body.innerHTML="";
+  if(!list.length){ body.innerHTML='<tr><td colspan="4" class="empty">아직 기록이 없어요. OX 퀴즈에 도전해서 첫 번째로 이름을 올려 보세요!</td></tr>'; return; }
+  let rank=0, prev=null;
+  list.forEach((r,i)=>{
+    if(!prev||r.correct!==prev.correct||r.time!==prev.time) rank=i+1; prev=r;
+    const tr=document.createElement("tr"); if(r.key===mk) tr.className="me";
+    const medal=rank===1?"🥇":rank===2?"🥈":rank===3?"🥉":"";
+    const cells=[ (medal?medal+" ":"")+rank, r.name+(r.key===mk?" (나)":""), `${r.correct} / ${ROUND}`, fmt(r.time) ];
+    cells.forEach((c,k)=>{const td=document.createElement("td");td.textContent=c;if(k===0)td.className="medal"+(rank===1?" rank-1":"");if(k>=2)td.classList.add("num");tr.appendChild(td);});
+    body.appendChild(tr);
+  });
+}
+
+(async()=>{
+  const timer=setTimeout(()=>{ if(!dbReady) $("rankNote").textContent="랭킹을 아직 불러오지 못했어요. 인터넷 연결을 확인해 주세요."; },10000);
+  try{ db = window.claude ? await window.claude.use("db") : null; }catch(e){ db=null; }
+  if(!db){
+    clearTimeout(timer);
+    $("rankBody").innerHTML='<tr><td colspan="4" class="empty">이 화면에서는 공유 랭킹을 볼 수 없어요. claude.ai에 로그인한 뒤 다시 열어 주세요.</td></tr>';
+    return;
+  }
+  db.collection("records").orderBy("correct","desc").limit(500).onSnapshot(snap=>{
+    rows=snap.docs.map(d=>{const x=d.data()||{};return {key:d.id,name:String(x.name||"?"),correct:+x.correct||0,time:typeof x.time==="number"?x.time:9999,bestAt:+x.bestAt||0};});
+    if(!snap.metadata.fromCache){ dbReady=true; clearTimeout(timer); $("rankNote").textContent=`지금까지 ${rows.length}명이 도전했어요.`; }
+    renderRank();
+  },err=>{
+    clearTimeout(timer);
+    $("rankNote").textContent="랭킹을 불러오지 못했어요. 페이지를 다시 열어 주세요.";
+  });
+})();
+
+/* 시작 화면 */
+const h0=location.hash.slice(1); show(["filter","quiz","rank"].includes(h0)?h0:"filter");
+</script>
+
+</body></html>
